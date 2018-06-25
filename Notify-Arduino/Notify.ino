@@ -52,7 +52,7 @@ int pirState = LOW;
 int mic = A0;
 
 Adafruit_AMG88xx amg;
-const int tempReadings = 10;
+const int tempReadings = 100;
 const int pressureReadings = 10;
 const int humidityReadings = 10;
 const int gasReadings = 10;
@@ -87,12 +87,16 @@ void setup() {
   pinMode(pirPin, INPUT);
   // ===                      Color Illumination                     ===
   if (tcs.begin()) {
-    Serial.println("Found sensor");
   } else {
-    Serial.println("No TCS34725 found ... check your connections");
     while (1);
   }
-
+    // ===                      Thermal Sensor                     ===
+bool status;
+status = amg.begin();
+    if (!status) {
+        Serial.println("Could not find a valid AMG88xx sensor, check wiring!");
+        while (1);
+    }
 
   // ===                   ACCELEROMETER                     ===
 
@@ -104,14 +108,13 @@ void setup() {
 #endif
 
   Serial.begin(9600);
-  while (!Serial); 
-  Serial.println(F("Initializing I2C devices..."));
-  mpu.initialize();
-  
-  Serial.println(F("Testing device connections..."));
-  Serial.println(mpu.testConnection() ? F("MPU6050 connection successful") : F("MPU6050 connection failed"));
+  while (!Serial);
 
-  
+  mpu.initialize();
+
+
+
+
   mpu.setXGyroOffset(220);
   mpu.setYGyroOffset(76);
   mpu.setZGyroOffset(-85);
@@ -121,6 +124,120 @@ void setup() {
 
 
 
+
+// ================================================================
+// ===                    Functions .                           ===
+// ================================================================
+// ===                   Temperature                        ===
+
+void temperaturefunc() {
+  for (int tempIndex = 0; tempIndex < 10; tempIndex++)
+  {
+    temperature[tempIndex] = bme.temperature;
+  }
+  if (tempIndex >= tempReadings)
+  {
+    tempIndex = 0;
+  }
+  if (tempIndex = 10)
+  {
+    Serial.println("ta");
+    Serial.println(stats.average(temperature, tempIndex));
+    Serial.println("tmax");
+    Serial.println(stats.maximum(temperature, tempIndex));
+    Serial.println("tmin");
+    Serial.println(stats.minimum(temperature, tempIndex));
+    Serial.println("tst");
+    Serial.println(stats.stdev(temperature, tempIndex));
+    Serial.println("ts");
+    Serial.println(stats.sum(temperature, tempIndex));
+    Serial.println("tr");
+    Serial.println(stats.range(temperature, tempIndex));
+  }
+}
+// ===                   Pressure                        ===
+
+void pressurefunc() {
+  for (int pressureIndex = 0; pressureIndex < 10; pressureIndex++)
+  {
+    pressure[pressureIndex] = bme.pressure / 100.0;
+  }
+  if (pressureIndex >= tempReadings)
+  {
+    pressureIndex = 0;
+  }
+  if (pressureIndex = 10)
+  {
+    Serial.println("pa");
+    Serial.println(stats.average(pressure, pressureIndex));
+    Serial.println("pmax");
+    Serial.println(stats.maximum(pressure, pressureIndex));
+    Serial.println("pmin");
+    Serial.println(stats.minimum(pressure, pressureIndex));
+    Serial.println("pst");
+    Serial.println(stats.stdev(pressure, pressureIndex));
+    Serial.println("ps");
+    Serial.println(stats.sum(pressure, pressureIndex));
+    Serial.println("pr");
+    Serial.println(stats.range(pressure, pressureIndex));
+
+  }
+}
+// ===                   Gas                        ===
+
+void gasfunc() {
+
+  for (int gasIndex = 0; gasIndex < 10; gasIndex++)
+  {
+    gas[gasIndex] = bme.gas_resistance / 1000.0;
+  }
+  if (gasIndex >= gasReadings)
+  {
+    gasIndex = 0;
+  }
+  if (gasIndex = 10)
+  {
+    Serial.println("ga");
+    Serial.println(stats.average(gas, gasIndex));
+    Serial.println("gmax");
+    Serial.println(stats.maximum(gas, gasIndex));
+    Serial.println("gmin: ");
+    Serial.println(stats.minimum(gas, gasIndex));
+    Serial.println("gst");
+    Serial.println(stats.stdev(gas, gasIndex));
+    Serial.println("gs");
+    Serial.println(stats.sum(gas, gasIndex));
+    Serial.println("gr");
+    Serial.println(stats.range(gas, gasIndex));
+  }
+}
+// ===                   Humidity                        ===
+
+void humidityfunc() {
+  for (int humidityIndex = 0; humidityIndex < 10; humidityIndex++)
+  {
+    humidity[humidityIndex] = bme.humidity;
+  }
+  if (humidityIndex >= humidityReadings)
+  {
+    humidityIndex = 0;
+  }
+  if (humidityIndex = 10)
+  {
+    Serial.println("hp");
+    Serial.println(stats.average(humidity, humidityIndex));
+    Serial.println("hmax");
+    Serial.println(stats.maximum(humidity, humidityIndex));
+    Serial.println("hmin");
+    Serial.println(stats.minimum(humidity, humidityIndex));
+    Serial.println("hst");
+    Serial.println(stats.stdev(humidity, humidityIndex));
+    Serial.println("hs");
+    Serial.println(stats.sum(humidity, humidityIndex));
+    Serial.println("hr");
+    Serial.println(stats.range(humidity, humidityIndex));
+  }
+}
 // ================================================================
 // ===                    MAIN PROGRAM LOOP                     ===
 // ================================================================
@@ -138,177 +255,126 @@ void loop() {
   tcs.getRawData(&r, &g, &b, &c);
   colorTemp = tcs.calculateColorTemperature(r, g, b);
   lux = tcs.calculateLux(r, g, b);
-
-  Serial.print("Color Temp: "); Serial.print(colorTemp, DEC); Serial.print(" K - ");
-  Serial.print("Lux: "); Serial.print(lux, DEC); Serial.print(" - ");
-  Serial.print("R: "); Serial.print(r, DEC); Serial.print(" ");
-  Serial.print("G: "); Serial.print(g, DEC); Serial.print(" ");
-  Serial.print("B: "); Serial.print(b, DEC); Serial.print(" ");
-  Serial.print("C: "); Serial.print(c, DEC); Serial.print(" ");
-  Serial.println(" ");
-  //    ===                   Thermal Camera .                  ===
-  amg.readPixels(pixels);
-
-
-  Serial.println("THERMAL CAMERA");
-  Serial.print("Average: ");
-  Serial.println(stats.average(pixels, AMG88xx_PIXEL_ARRAY_SIZE));
-  Serial.print("Maximum: ");
-  Serial.println(stats.maximum(pixels, AMG88xx_PIXEL_ARRAY_SIZE));
-  Serial.print("Minimum: ");
-  Serial.println(stats.minimum(pixels, AMG88xx_PIXEL_ARRAY_SIZE, .0000001));
-  Serial.print("Standard Deviation: ");
-  Serial.println(stats.stdev(pixels, AMG88xx_PIXEL_ARRAY_SIZE));
-
-  Serial.print("Sum: ");
-  Serial.println(stats.sum(pixels, AMG88xx_PIXEL_ARRAY_SIZE));
-
-  // ===                   MICROPHONE                        ===
-
-  // read from the sensor:
-  mic = analogRead(mic);
-  Serial.println("Microphone");
-  Serial.print(mic);
+  Serial.println("l");
+  Serial.println(lux);
+  Serial.println("r");
+  Serial.println(r);
+  Serial.println("g");
+  Serial.println(g);
+  Serial.println("b");
+  Serial.println(b);
+  Serial.println("ct");
+  Serial.println(colorTemp);
 
 
-  /*Serial.println("MICROPHONE");
-    Serial.print("Average: ");
-    Serial.println(stats.average(readings, readIndex));
-    Serial.print("Median: ");
-    Serial.println(stats.median(readings, readIndex));
-    Serial.print("Mode: ");
-    Serial.println(stats.mode(readings, readIndex, .0000001));
-    Serial.print("Standard Deviation: ");
-    Serial.println(stats.stdev(readings, readIndex));
-    if (readIndex >= numReadings) {
-    // ...wrap around to the beginning:
-    readIndex = 0;
+
+
+
+
+  /* Serial.print("Color Temp: "); Serial.print(colorTemp, DEC); Serial.print(" K - ");
+    Serial.print("Lux: "); Serial.print(lux, DEC); Serial.print(" - ");
+    Serial.print("R: "); Serial.print(r, DEC); Serial.print(" ");
+    Serial.print("G: "); Serial.print(g, DEC); Serial.print(" ");
+    Serial.print("B: "); Serial.print(b, DEC); Serial.print(" ");
+    Serial.print("C: "); Serial.print(c, DEC); Serial.print(" ");
+    Serial.println(" ");*/
+   //    ===                   Thermal Camera .                  ===
+ amg.readPixels(pixels);
+
+    Serial.println("[");
+    for(int i=1; i<=AMG88xx_PIXEL_ARRAY_SIZE; i++){
+      Serial.print(pixels[i-1]);
+      Serial.print(", ");
+      if( i%8 == 0 ) Serial.println();
     }
+    Serial.println("]");
+    
+
+
+
+  /*  // ===                   MICROPHONE                        ===
+
+    // read from the sensor:
+    mic = analogRead(mic);
+
+    //Serial.println("Microphone");
+    Serial.println(mic);
+
+
+    /*Serial.println("MICROPHONE");
+     Serial.print("Average: ");
+     Serial.println(stats.average(readings, readIndex));
+     Serial.print("Median: ");
+     Serial.println(stats.median(readings, readIndex));
+     Serial.print("Mode: ");
+     Serial.println(stats.mode(readings, readIndex, .0000001));
+     Serial.print("Standard Deviation: ");
+     Serial.println(stats.stdev(readings, readIndex));
+     if (readIndex >= numReadings) {
+     // ...wrap around to the beginning:
+     readIndex = 0;
+     }
   */
 
   // ===                TEMPERATURE + HUMIDITY               ===
+  if (! bme.performReading()) {
+    Serial.println("Failed to perform reading :(");
+    return;
+  }
+  temperaturefunc();
+  Serial.println("Pressure");
+  pressurefunc();
+  Serial.println("Gas");
+  gasfunc();
+  Serial.println("Humidity");
+  humidityfunc();
 
-  temperature[tempIndex] = bme.temperature;
-  tempIndex = tempIndex + 1;
-  Serial.println("TEMPERATURE");
-  Serial.print("Average: ");
-  Serial.println(stats.average(temperature, tempIndex));
-  Serial.print("Maximum: ");
-  Serial.println(stats.maximum(temperature, tempIndex));
-  Serial.print("Minimum: ");
-  Serial.println(stats.minimum(temperature, tempIndex, .0000001));
-  Serial.print("Standard Deviation: ");
-  Serial.println(stats.stdev(temperature, tempIndex));
-  Serial.println("Sum: ");
-  Serial.println(stats.sum(temperature, tempIndex));
-  pressure[pressureIndex] = bme.pressure / 100.0;
-  pressureIndex = pressureIndex + 1;
-  Serial.println("PRESSURE");
-  Serial.print("Average: ");
-  Serial.println(stats.average(pressure, pressureIndex));
-  Serial.print("Maximum: ");
-  Serial.println(stats.maximum(pressure, pressureIndex));
-  Serial.print("Minimum: ");
-  Serial.println(stats.minimum(pressure, pressureIndex, .0000001));
-  Serial.print("Standard Deviation: ");
-  Serial.println(stats.stdev(pressure, pressureIndex));
-  Serial.println("Sum: ");
-  Serial.println(stats.sum(pressure, pressureIndex));
-  humidity[humidityIndex] = bme.humidity;
-  humidityIndex = humidityIndex + 1;
-  Serial.println("HUMIDITY");
-  Serial.print("Average: ");
-  Serial.println(stats.average(humidity, humidityIndex));
-  Serial.print("Maximum: ");
-  Serial.println(stats.maximum(humidity, humidityIndex));
-  Serial.print("Mode: ");
-  Serial.println(stats.mode(humidity, humidityIndex, .0001));
-  Serial.print("Standard Deviation: ");
-  Serial.println(stats.stdev(humidity, humidityIndex));
-  Serial.println("Sum: ");
-  Serial.println(stats.sum(humidity, humidityIndex));
-  gas[gasIndex] = bme.gas_resistance / 1000.0;
-  gasIndex = gasIndex + 1;
-  Serial.println("GAS");
-  Serial.print("Average: ");
-  Serial.println(stats.average(gas, gasIndex));
-  Serial.print("Maximum: ");
-  Serial.println(stats.maximum(gas, gasIndex));
-  Serial.print("Minimum: ");
-  Serial.println(stats.minimum(gas, gasIndex, .0001));
-  Serial.print("Standard Deviation: ");
-  Serial.println(stats.stdev(gas, gasIndex));
-  Serial.println("Sum: ");
-  Serial.println(stats.sum(gas, gasIndex));
-  Serial.println("Approx. Altitude = ");
-  Serial.print(bme.readAltitude(SEALEVELPRESSURE_HPA));
-  Serial.println(" m");
-  delay(1000);
-  if (tempIndex >= tempReadings) {
-    // ...wrap around to the beginning:
-    tempIndex = 0;
-  }
-  if (pressureIndex >= pressureReadings) {
-    // ...wrap around to the beginning:
-    pressureIndex = 0;
-  }
-  if (humidityIndex >= humidityReadings) {
-    // ...wrap around to the beginning:
-    humidityIndex = 0;
-  }
-  delay(1000);
+  Serial.println("alt");
+  Serial.println(bme.readAltitude(SEALEVELPRESSURE_HPA));
+
   // ===                   MOTION SENSOR                     ===
 
 
   val = digitalRead(pirPin);  // read input value
-  Serial.println("Motion Sensor val :");
+
+  Serial.println("ms");
   Serial.println(val);
-  if (val == HIGH) {            // check if the input is HIGH
+
+  /*if (val == HIGH) {            // check if the input is HIGH
     if (pirState == LOW) {
       // we have just turned on
       Serial.println("Motion detected!");
       // We only want to print on the output change, not state
       pirState = HIGH;
     }
-  } else {
+    } else {
     if (pirState == HIGH) {
       // we have just turned of
       Serial.println("Motion ended!");
       // We only want to print on the output change, not state
       pirState = LOW;
     }
-  }
-
+    }
+  */
 
   // ===                   ACCELEROMETER                     ===
 
-   
 
-mpu.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
 
-    // these methods (and a few others) are also available
-    //accelgyro.getAcceleration(&ax, &ay, &az);
-    //accelgyro.getRotation(&gx, &gy, &gz);
+  mpu.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
 
-    #ifdef OUTPUT_READABLE_ACCELGYRO
-        // display tab-separated accel/gyro x/y/z values
-        Serial.print("a/g:\t");
-        Serial.print(ax); Serial.print("\t");
-        Serial.print(ay); Serial.print("\t");
-        Serial.print(az); Serial.print("\t");
-        Serial.print(gx); Serial.print("\t");
-        Serial.print(gy); Serial.print("\t");
-        Serial.println(gz);
-    #endif
-
-    #ifdef OUTPUT_BINARY_ACCELGYRO
-        Serial.write((uint8_t)(ax >> 8)); Serial.write((uint8_t)(ax & 0xFF));
-        Serial.write((uint8_t)(ay >> 8)); Serial.write((uint8_t)(ay & 0xFF));
-        Serial.write((uint8_t)(az >> 8)); Serial.write((uint8_t)(az & 0xFF));
-        Serial.write((uint8_t)(gx >> 8)); Serial.write((uint8_t)(gx & 0xFF));
-        Serial.write((uint8_t)(gy >> 8)); Serial.write((uint8_t)(gy & 0xFF));
-        Serial.write((uint8_t)(gz >> 8)); Serial.write((uint8_t)(gz & 0xFF));
-    #endif
+  // these methods (and a few others) are also available
+  //accelgyro.getAcceleration(&ax, &ay, &az);
+  //accelgyro.getRotation(&gx, &gy, &gz);
+  /*
+    Serial.println(ax);
+    Serial.println(ay);
+    Serial.println(az);
+    Serial.println(gx);
+    Serial.println(gy);
+    Serial.println(gz);
+    delay(1000);
+  */
 }
 
 
